@@ -41,6 +41,16 @@ class Manifest
     }
 
     /**
+     * Get the default environment of the project.
+     *
+     * @return string
+     */
+    public static function defaultEnvironment()
+    {
+        return static::current()['default-environment'] ?? 'staging';
+    }
+
+    /**
      * Get the build commands for the given environment.
      *
      * @param  string  $environment
@@ -53,6 +63,17 @@ class Manifest
         }
 
         return static::current()['environments'][$environment]['build'] ?? [];
+    }
+
+    /**
+     * Get the Dockerfile for the given environment.
+     *
+     * @param  string  $environment
+     * @return string
+     */
+    public static function dockerfile($environment)
+    {
+        return static::current()['environments'][$environment]['dockerfile'] ?? "{$environment}.Dockerfile";
     }
 
     /**
@@ -202,7 +223,9 @@ class Manifest
                     'build'      => [
                         'COMPOSER_MIRROR_PATH_REPOS=1 composer install --no-dev',
                         'php artisan event:cache',
-                        'npm ci && npm run prod && rm -rf node_modules',
+                        file_exists(Path::current().'/webpack.mix.js')
+                            ? 'npm ci && npm run prod && rm -rf node_modules'
+                            : 'npm ci && npm run build && rm -rf node_modules',
                     ],
                 ]),
                 'staging' => array_filter([
@@ -212,7 +235,9 @@ class Manifest
                     'build'      => [
                         'COMPOSER_MIRROR_PATH_REPOS=1 composer install',
                         'php artisan event:cache',
-                        'npm ci && npm run dev && rm -rf node_modules',
+                        file_exists(Path::current().'/webpack.mix.js')
+                            ? 'npm ci && npm run dev && rm -rf node_modules'
+                            : 'npm ci && npm run build && rm -rf node_modules',
                     ],
                 ]),
             ],

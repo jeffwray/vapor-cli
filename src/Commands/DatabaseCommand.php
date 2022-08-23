@@ -44,9 +44,11 @@ class DatabaseCommand extends Command
 
         $public = $this->determineIfPublic();
 
-        if (! $public &&
+        if (
+            ! $public &&
             ! $this->networkHasNatGateway($networkId) &&
-            ! Helpers::confirm('A private database will require Vapor to add a NAT gateway to your network (~32 / month). Would you like to proceed', true)) {
+            ! Helpers::confirm('A private database will require Vapor to add a NAT gateway to your network (~32 / month). Would you like to proceed', true)
+        ) {
             Helpers::abort('Action cancelled.');
         }
 
@@ -57,7 +59,7 @@ class DatabaseCommand extends Command
         $allocatedStorage = $this->determineAllocatedStorage($databaseType);
 
         $pause = $databaseType == 'aurora-serverless' &&
-                 Helpers::confirm('To reduce your bill, should the database pause during periods of inactivity', false);
+            Helpers::confirm('To reduce your bill, should the database pause during periods of inactivity', false);
 
         $response = $this->vapor->createDatabase(
             $networkId,
@@ -107,15 +109,16 @@ class DatabaseCommand extends Command
             return 'rds';
         }
 
-        return tap($this->option('serverless') ? 'aurora-serverless' : $this->menu('Which type of database would you like to create?', [
+        return tap($this->option('serverless') ? 'aurora-serverless-v2' : $this->menu('Which type of database would you like to create?', [
             'rds'                     => 'Fixed Size MySQL Instance 8.0 (Free Tier Eligible)',
             'rds-mysql-5.7'           => 'Fixed Size MySQL Instance 5.7 (Free Tier Eligible)',
-            'aurora-serverless'       => 'Serverless MySQL Aurora Cluster',
+            'aurora-serverless'       => 'Serverless v1 MySQL 5.7 Aurora Cluster',
+            'aurora-serverless-v2'    => 'Serverless v2 MySQL 8.0 Aurora Cluster',
             'rds-pgsql-13.4'          => 'Fixed Size PostgreSQL Instance 13.4',
-            'rds-pgsql-11.10'         => 'Fixed Size PostgreSQL Instance 11.10',
-            'aurora-serverless-pgsql' => 'Serverless PostgreSQL Aurora Cluster',
+            'aurora-serverless-pgsql' => 'Serverless PostgreSQL 10.7 Aurora Cluster',
+            'aurora-serverless-v2-pgsql' => 'Serverless v2 PostgreSQL 14.3 Aurora Cluster',
         ]), function ($type) use ($public) {
-            if ($type == 'aurora-serverless' && $public) {
+            if (in_array($type, ['aurora-serverless', 'aurora-serverless-v2', 'aurora-serverless-pgsql', 'aurora-serverless-v2-pgsql']) && $public) {
                 Helpers::abort('Aurora Serverless clusters may not be publicly accessible.');
             }
         });
@@ -133,14 +136,15 @@ class DatabaseCommand extends Command
             return 'db.t3.micro';
         }
 
-        if ($type == 'aurora-serverless') {
+        if (in_array($type, ['aurora-serverless', 'aurora-serverless-v2'])) {
             return;
         }
 
-        if ($type == 'rds'
+        if (
+            $type == 'rds'
             || $type == 'rds-mysql-5.7'
-            || $type == 'rds-pgsql-11.10'
-            || $type == 'rds-pgsql-13.4') {
+            || $type == 'rds-pgsql-13.4'
+        ) {
             return $this->determineRdsInstanceClass();
         }
     }
@@ -178,7 +182,7 @@ class DatabaseCommand extends Command
      */
     protected function determineAllocatedStorage($type)
     {
-        if ($type == 'aurora-serverless') {
+        if (in_array($type, ['aurora-serverless', 'aurora-serverless-v2', 'aurora-serverless-pgsql', 'aurora-serverless-v2-pgsql'])) {
             return;
         }
 

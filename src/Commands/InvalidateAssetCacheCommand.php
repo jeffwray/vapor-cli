@@ -6,10 +6,8 @@ use Laravel\VaporCli\Helpers;
 use Laravel\VaporCli\Manifest;
 use Symfony\Component\Console\Input\InputArgument;
 
-class RedeployCommand extends Command
+class InvalidateAssetCacheCommand extends Command
 {
-    use DisplaysDeploymentProgress;
-
     /**
      * Configure the command options.
      *
@@ -18,9 +16,9 @@ class RedeployCommand extends Command
     protected function configure()
     {
         $this
-            ->setName('redeploy')
+            ->setName('asset:invalidate-cache')
             ->addArgument('environment', InputArgument::OPTIONAL, 'The environment name')
-            ->setDescription("Redeploy an environment's latest deployment");
+            ->setDescription('Invalidate the asset cache for the given environment');
     }
 
     /**
@@ -32,10 +30,11 @@ class RedeployCommand extends Command
     {
         Helpers::ensure_api_token_is_available();
 
-        Helpers::step('<options=bold>Initiating Redeployment</>');
-
-        $deployment = $this->displayDeploymentProgress(
-            $this->vapor->redeploy(Manifest::id(), $this->argument('environment'))
+        $this->vapor->invalidateAssetCache(
+            Manifest::id(),
+            $this->argument('environment')
         );
+
+        Helpers::info("Asset cache for {$this->argument('environment')} is being invalidated.");
     }
 }
